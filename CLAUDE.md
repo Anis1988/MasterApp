@@ -1,6 +1,6 @@
 # Working on this repo
 
-- Master = a private dashboard for all of Anis1988's apps + one pause switch. Vite + React 18 + TypeScript, plain CSS (`src/index.css`, every colour a CSS variable, light and dark). Deployed on Vercel from `main`.
+- Master = a private dashboard for all of Anis1988's apps + one pause switch. Vite + React 18 + TypeScript, plain CSS in the Liquid Glass look (`src/index.css`: frosted `.glass` panes over a fixed colour backdrop, every colour a CSS variable, light and dark glass). Deployed on Vercel from `main`.
 - Two server functions (Vercel Hobby allows 12): `api/status.ts` (GET, everything on the page, cached 45 s in memory, `?fresh=1` skips the cache) and `api/pause.ts` (POST `{action: "pause"|"resume", all: true}` or `{action, id}`). Logic lives in `server/`. Server imports end in `.js` (Vercel runs `api/` as Node ESM). `npm run dev` serves `api/*.ts` too (`vite.config.ts`).
 - Every API call needs `APP_ACCESS_TOKEN` (header `X-Access-Token`), same pattern as the other apps.
 - The app list is `server/catalog.ts` (groups: `mine`, `device`, `sites`). Vercel projects and Netlify sites are matched to it by linked GitHub repo (lower case). Unmatched ones show under "Also on Vercel / Netlify".

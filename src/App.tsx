@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ActionResult, AppStatus, Group, Status } from '../server/types';
+import type { ActionResult, Status } from '../server/types';
 import { AppCard } from './components/AppCard';
 import { Login } from './components/Login';
-import { ExtrasCard, Guide, SetupCard, SpendCard } from './components/Panels';
+import { DevicesCard, ExtrasCard, Guide, Overview, SetupCard, SitesCard, SpendCard } from './components/Panels';
 import { PauseAll } from './components/PauseAll';
-import { Spinner, Stat } from './components/ui';
+import { Backdrop, Icon, Spinner } from './components/ui';
 import { ApiError, clearCode, fetchStatus, flip, getCode, setCode, type Target } from './lib/api';
-import { ago, usd } from './lib/format';
 import { getTheme, setTheme, type Theme } from './lib/theme';
 
-const SECTIONS: { group: Group; title: string; sub: string }[] = [
-  { group: 'mine', title: 'My apps', sub: 'Your own tools. “Pause everything” covers these.' },
-  { group: 'device', title: 'Phone & PC apps', sub: 'Shipped as GitHub releases.' },
-  { group: 'sites', title: 'Websites', sub: 'Public sites, some for clients. Never in “Pause everything”.' },
-];
+const REFRESH = 'M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6';
+const SUN = 'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4';
+const MOON = 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z';
+const LOCK = 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4';
 
 export default function App() {
   const [code, setCodeState] = useState(getCode());
@@ -91,136 +89,148 @@ export default function App() {
     );
 
   const apps = status?.apps ?? [];
-  const withSite = apps.filter((a) => a.site);
-  const up = withSite.filter((a) => a.site?.ok).length;
-  const problems = apps.filter((a) => a.tone === 'bad' || a.tone === 'warn');
-  const paused = apps.filter((a) => a.paused);
+  const mine = apps.filter((a) => a.group === 'mine');
+  const devices = apps.filter((a) => a.group === 'device');
+  const sites = apps.filter((a) => a.group === 'sites');
+  const isProblem = (a: (typeof apps)[number]) => !a.paused && (a.tone === 'bad' || a.tone === 'warn');
+  const mineProblems = mine.filter(isProblem);
+  const shownMine = onlyProblems ? mineProblems : mine;
   const missingSetup = status?.setup.some((s) => !s.ok) ?? false;
-  const shown = (g: Group): AppStatus[] => apps.filter((a) => a.group === g && (!onlyProblems || a.tone === 'bad' || a.tone === 'warn'));
 
   return (
-    <div className="page">
-      <header className="top">
-        <div className="brand">
-          <span className="logo" aria-hidden>
-            🛰️
-          </span>
-          <div>
+    <>
+      <Backdrop />
+      <div className="page">
+        <header className="glass top">
+          <div className="brand">
+            <span className="orb" aria-hidden />
             <h1>Master</h1>
-            <p className="muted small">{status ? `Updated ${ago(status.at)}` : loading ? 'Loading…' : ' '}</p>
           </div>
-        </div>
-        <div className="top-actions">
-          <button className="btn icon" onClick={() => void load(true)} disabled={loading} aria-label="Refresh now" title="Refresh now">
-            {loading ? <Spinner /> : '↻'}
-          </button>
-          <button
-            className="btn icon"
-            aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-            title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-            onClick={() => {
-              const t = theme === 'dark' ? 'light' : 'dark';
-              setTheme(t);
-              setThemeState(t);
-            }}
-          >
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
-          <button
-            className="btn icon"
-            aria-label="Lock (forget the access code on this device)"
-            title="Lock"
-            onClick={() => {
-              clearCode();
-              setCodeState('');
-              setStatus(null);
-            }}
-          >
-            🔒
-          </button>
-        </div>
-      </header>
-
-      {error && (
-        <div className="card problem">
-          <p className="bad-text">
-            <b>⚠️ {error instanceof ApiError && error.setup ? 'Setup needed' : 'Something went wrong'}</b>
-          </p>
-          <p className="small">{error.message}</p>
-        </div>
-      )}
-
-      {!status && !error && (
-        <div className="card">
-          <Spinner label="Checking every app…" />
-        </div>
-      )}
-
-      {status && (
-        <>
-          <PauseAll apps={apps} busy={busy === 'all'} results={results} onAct={act} />
-
-          <div className="stats">
-            <Stat label="Sites up" value={`${up}/${withSite.length}`} tone={up < withSite.length ? 'bad' : 'good'} sub={up < withSite.length ? `${withSite.length - up} not answering` : 'all answering'} />
-            <Stat label="Need a look" value={problems.length} tone={problems.length ? 'warn' : 'good'} sub={problems.length ? problems.map((p) => p.name).slice(0, 3).join(', ') : 'nothing'} />
-            <Stat label="Paused" value={paused.length} sub={paused.length ? paused.map((p) => p.name).slice(0, 3).join(', ') : 'none'} />
-            <Stat label="Claude this month" value={status.spend.configured && !status.spend.error ? usd(status.spend.monthUsd) : '—'} sub={status.spend.configured ? (status.spend.error ? 'could not load' : `today ${usd(status.spend.todayUsd)}`) : 'add admin key'} />
+          <nav className="sections" aria-label="Sections">
+            <a href="#overview">Overview</a>
+            <a href="#apps">Apps</a>
+            <a href="#devices">Devices</a>
+            <a href="#websites">Websites</a>
+          </nav>
+          <div className="top-actions">
+            <button className="btn icon" onClick={() => void load(true)} disabled={loading} aria-label="Refresh now" title="Refresh now">
+              {loading ? <Spinner /> : <Icon d={REFRESH} />}
+            </button>
+            <button
+              className="btn icon"
+              aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              onClick={() => {
+                const t = theme === 'dark' ? 'light' : 'dark';
+                setTheme(t);
+                setThemeState(t);
+              }}
+            >
+              <Icon d={theme === 'dark' ? SUN : MOON} />
+            </button>
+            <button
+              className="btn icon"
+              aria-label="Lock (forget the access code on this device)"
+              title="Lock"
+              onClick={() => {
+                clearCode();
+                setCodeState('');
+                setStatus(null);
+              }}
+            >
+              <Icon d={LOCK} />
+            </button>
           </div>
+        </header>
 
-          {missingSetup && <SetupCard items={status.setup} />}
+        {error && (
+          <div className="glass card problem" role="alert">
+            <p className="bad-text">
+              <b>{error instanceof ApiError && error.setup ? 'Setup needed' : 'Something went wrong'}</b>
+            </p>
+            <p className="small">{error.message}</p>
+          </div>
+        )}
 
-          {status.errors.length > 0 && (
-            <div className="card problem">
-              <p className="warn-text">
-                <b>Some data couldn’t load</b>
-              </p>
-              <ul className="small">
-                {status.errors.map((e) => (
-                  <li key={e}>{e}</li>
-                ))}
-              </ul>
+        {!status && !error && (
+          <div className="glass card">
+            <Spinner label="Checking every app…" />
+          </div>
+        )}
+
+        {status && (
+          <>
+            <div className="hero">
+              <Overview status={status} loading={loading} />
+              <PauseAll apps={apps} busy={busy === 'all'} results={results} onAct={act} />
             </div>
-          )}
 
-          <div className="filter">
-            <button className="chip" aria-pressed={!onlyProblems} onClick={() => setOnlyProblems(false)}>
-              All apps
-            </button>
-            <button className="chip" aria-pressed={onlyProblems} onClick={() => setOnlyProblems(true)}>
-              Only problems ({problems.length})
-            </button>
-          </div>
+            {missingSetup && <SetupCard items={status.setup} />}
 
-          {SECTIONS.map((s) => {
-            const list = shown(s.group);
-            if (!list.length) return null;
-            return (
-              <section key={s.group} className="section">
-                <div className="section-head">
-                  <h2>{s.title}</h2>
-                  <p className="muted small">{s.sub}</p>
+            {status.errors.length > 0 && (
+              <div className="glass card problem">
+                <p className="warn-text">
+                  <b>Some data couldn’t load</b>
+                </p>
+                <ul className="small">
+                  {status.errors.map((e) => (
+                    <li key={e}>{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <section className="section" id="apps" aria-label="My apps">
+              <div className="section-head">
+                <div className="section-title">
+                  <h2>My apps</h2>
+                  <span className="small muted">
+                    {mine.length} apps · {apps.filter((a) => a.inPauseAll).length} on the switch
+                  </span>
                 </div>
+                <div className="glass segmented" role="group" aria-label="Filter">
+                  <button aria-pressed={!onlyProblems} onClick={() => setOnlyProblems(false)}>
+                    All apps
+                  </button>
+                  <button aria-pressed={onlyProblems} onClick={() => setOnlyProblems(true)}>
+                    Needs a look · {mineProblems.length}
+                  </button>
+                </div>
+              </div>
+              {shownMine.length ? (
                 <div className="grid">
-                  {list.map((a) => (
+                  {shownMine.map((a) => (
                     <AppCard
                       key={a.id}
                       app={a}
+                      index={mine.indexOf(a)}
                       owner={status.owner}
                       busy={busy === a.id || busy === 'all'}
                       onFlip={(pause) => void act(pause ? 'pause' : 'resume', { id: a.id })}
                     />
                   ))}
                 </div>
-                {s.group === 'mine' && <SpendCard spend={status.spend} />}
-              </section>
-            );
-          })}
+              ) : (
+                <div className="glass card">
+                  <p className="good-text">
+                    <b>Nothing needs a look.</b>
+                  </p>
+                </div>
+              )}
+            </section>
 
-          {status.extras.length > 0 && !onlyProblems && <ExtrasCard extras={status.extras} />}
-          {!missingSetup && <SetupCard items={status.setup} />}
-          <Guide />
-        </>
-      )}
-    </div>
+            <div className="row3">
+              <SpendCard spend={status.spend} />
+              {devices.length > 0 && <DevicesCard apps={devices} offset={mine.length} />}
+              {sites.length > 0 && <SitesCard apps={sites} busyId={busy} onFlip={(id, pause) => void act(pause ? 'pause' : 'resume', { id })} />}
+            </div>
+
+            {status.extras.length > 0 && <ExtrasCard extras={status.extras} />}
+            {!missingSetup && <SetupCard items={status.setup} />}
+            <Guide />
+          </>
+        )}
+      </div>
+    </>
   );
 }

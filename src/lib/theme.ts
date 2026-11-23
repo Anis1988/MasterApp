@@ -19,5 +19,5 @@ export function setTheme(t: Theme): void {
     /* private mode */
   }
   document.documentElement.classList.toggle('dark', t === 'dark');
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t === 'dark' ? '#0A0D14' : '#F3F5F8');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t === 'dark' ? '#090A14' : '#EEF1F7');
 }
