@@ -1,0 +1,10 @@
+{
+  "name": "Master",
+  "short_name": "Master",
+  "description": "All your apps in one place, with one pause switch.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0D14",
+  "theme_color": "#0A0D14",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
