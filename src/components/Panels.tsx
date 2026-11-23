@@ -31,7 +31,7 @@ export function Overview({ status, loading }: { status: Status; loading: boolean
   const headline = allPaused ? 'Everything is paused.' : withSite.length ? `${up} of ${withSite.length} sites are up.` : 'Welcome to Master.';
   const subline = allPaused
     ? `No AI credits, emails or cron from ${targets.length} apps until you resume.`
-    : `${problems.length ? `${problems.length} need${problems.length === 1 ? 's' : ''} a look` : 'Nothing needs a look'}${hasSpend ? ` · Claude ${usd(spend.monthUsd)} this month` : ''}`;
+    : `${status.kill.aiOff ? 'AI is off everywhere · ' : ''}${problems.length ? `${problems.length} need${problems.length === 1 ? 's' : ''} a look` : 'Nothing needs a look'}${hasSpend ? ` · Claude ${usd(spend.monthUsd)} this month` : ''}`;
 
   return (
     <section className="glass overview" id="overview" aria-label="Overview">
@@ -296,8 +296,9 @@ export function ExtrasCard({ extras }: { extras: Extra[] }) {
 }
 
 export function Guide() {
+  const here = typeof window !== 'undefined' ? window.location.origin : 'https://your-master-address';
   return (
-    <details className="glass card guide">
+    <details className="glass card guide" id="guide">
       <summary>
         <h2 style={{ fontSize: 18 }}>Guide</h2>
       </summary>
@@ -315,6 +316,26 @@ export function Guide() {
         turns it all back on. Each card also has its own Pause button. Websites (some are for clients) and this page are never in “Pause
         everything”. Netlify has no pause switch, so Trading’s scheduled functions keep running: stop those in the app itself.
       </p>
+      <h3>The kill switch (connect an app)</h3>
+      <p>
+        Pausing a Vercel site only works on Vercel, and Netlify can’t be paused at all. The kill switch fixes that: each app asks Master “should I
+        stop?” before it calls AI, sends an email or runs a scheduled job, and stops if the answer is yes. Pause, Pause everything and{' '}
+        <b>AI off everywhere</b> all use it. An app’s card says <i>Connected</i> once it has asked. If Master can’t be reached, apps carry on as
+        normal, so Master being down never takes an app down.
+      </p>
+      <ol>
+        <li>
+          In Vercel, open this project → Storage → Upstash Redis → connect it (an existing database is fine). That adds <code>KV_REST_API_URL</code>{' '}
+          and <code>KV_REST_API_TOKEN</code>. Redeploy.
+        </li>
+        <li>
+          Each app gets a small file, <code>master-switch</code>, and a one-line check before AI calls and scheduled jobs (already prepared as pull
+          requests in your repos). Merge them.
+        </li>
+        <li>
+          If an app can’t find Master, add <code>MASTER_URL</code> = <code>{here}</code> to that app’s settings on Vercel or Netlify and redeploy it.
+        </li>
+      </ol>
       <h3>Light and dark</h3>
       <p>The moon / sun button at the top switches between light and dark glass on this device. Until you pick, it follows your phone or computer.</p>
       <h3>Setting it up (once)</h3>

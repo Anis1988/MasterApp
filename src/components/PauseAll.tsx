@@ -1,18 +1,24 @@
-import type { ActionResult, AppStatus } from '../../server/types';
+import type { ActionResult, AppStatus, Status } from '../../server/types';
 import type { Target } from '../lib/api';
 import { ConfirmButton, Icon, PAUSE_ICON, Pill, PLAY_ICON, Spinner, useArmed } from './ui';
 
 /** The big glass capsule: pauses every app of yours that can be paused (never websites or this dashboard). */
 export function PauseAll({
   apps,
+  kill,
   busy,
+  aiBusy,
   results,
   onAct,
+  onAi,
 }: {
   apps: AppStatus[];
+  kill: Status['kill'];
   busy: boolean;
+  aiBusy: boolean;
   results: ActionResult[] | null;
   onAct: (action: 'pause' | 'resume', target: Target) => void;
+  onAi: (off: boolean) => void;
 }) {
   const [armed, press] = useArmed();
   const targets = apps.filter((a) => a.inPauseAll);
@@ -67,9 +73,31 @@ export function PauseAll({
       )}
       <p className="small" style={{ color: 'var(--ink-2)' }}>
         {targets.length
-          ? `Stops ${targets.map((a) => a.name).join(', ')}: Vercel sites go offline and scheduled jobs stop, so no AI credits, emails or cron.`
-          : 'Once the tokens are in, this stops your own apps in one go: Vercel sites go offline and scheduled jobs stop.'}
+          ? `Stops ${targets.map((a) => a.name).join(', ')}: AI calls, emails and scheduled jobs stop${kill.configured ? ' in every connected app' : ''}, and Vercel sites go offline.`
+          : 'Once the tokens are in, this stops your own apps in one go: AI calls, emails and scheduled jobs stop, Vercel sites go offline.'}
       </p>
+      {kill.configured ? (
+        <div className="pane ai-row">
+          <div className="grow" style={{ display: 'flex', flexDirection: 'column' }}>
+            <b>AI off everywhere</b>
+            <span className="small muted">
+              Sites stay up, apps stop calling AI. {kill.connected} of {kill.of} apps connected.
+            </span>
+          </div>
+          {aiBusy ? (
+            <Spinner />
+          ) : (
+            <button type="button" role="switch" aria-checked={kill.aiOff} aria-label="AI off everywhere" className={`toggle${kill.aiOff ? ' on' : ''}`} onClick={() => onAi(!kill.aiOff)}>
+              <span className="knob" aria-hidden />
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="small muted">
+          Want this to reach every app, Trading on Netlify too, and an “AI off everywhere” switch? Connect Upstash Redis (Setup), then connect each app
+          (Guide).
+        </p>
+      )}
       <div className="chips">
         <span className="small muted">Keeps running:</span>
         <span className="chip">Websites</span>

@@ -43,6 +43,8 @@ export interface HostInfo {
   url?: string;
   deploy?: Deploy;
   paused?: boolean;
+  /** Vercel team the project lives in (none = your own account). */
+  teamId?: string;
 }
 
 export interface Schedule {
@@ -75,7 +77,9 @@ export interface AppStatus extends AppDef {
   host?: HostInfo;
   repoInfo?: RepoInfo;
   site?: SiteCheck;
-  /** Its Vercel site is paused, or all of its scheduled jobs are off. */
+  /** Kill switch: what Master tells this app, and when the app last asked (null = never: not connected yet). */
+  kill?: { ai: boolean; work: boolean; seenAt: string | null };
+  /** Paused by the kill switch, its Vercel site is paused, or all of its scheduled jobs are off. */
   paused: boolean;
   /** Something here can be paused from this dashboard. */
   pausable: boolean;
@@ -118,6 +122,8 @@ export interface Status {
   extras: Extra[];
   spend: Spend;
   setup: SetupItem[];
+  /** The kill switch: is the store set up, and is AI off everywhere? */
+  kill: { configured: boolean; aiOff: boolean; connected: number; of: number; updatedAt?: string; error?: string };
   errors: string[];
 }
 

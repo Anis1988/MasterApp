@@ -42,3 +42,11 @@ npm run dev
 ```
 
 `npm run dev` serves `api/*.ts` too (see `vite.config.ts`).
+
+## Kill switch (every app, any host)
+
+Each of your apps asks Master before AI calls and background jobs: `GET <master>/api/flags?app=<catalog id>` →
+`{ ai, work, paused }`. `ai: true` = don't call AI; `work: true` = don't run cron jobs, scheduled functions or send
+emails. Apps keep the answer 30 s and carry on if Master can't be reached. The flags live in Upstash Redis
+(`KV_REST_API_URL` / `KV_REST_API_TOKEN`, Vercel → Storage). Pause / Pause everything set both flags for the app;
+"AI off everywhere" sets `ai` for all. The helper each app uses is in `connect/master-switch.ts`.

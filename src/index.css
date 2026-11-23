@@ -226,6 +226,13 @@ a.mini:hover { background: var(--glass-strong); }
 .mini-label { font-size: 11.5px; font-weight: 500; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mini-value { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mini-value.good { color: var(--good); } .mini-value.warn { color: var(--warn); } .mini-value.bad { color: var(--bad); } .mini-value.paused { color: var(--paused); }
+.mini.wide { grid-column: 1 / -1; }
+.ai-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.toggle { flex: none; position: relative; width: 52px; height: 32px; padding: 0; border-radius: 999px; cursor: pointer; border: 1px solid var(--glass-edge); background: var(--line); transition: background 0.15s; }
+.toggle .knob { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.3); transition: transform 0.18s; }
+.toggle.on { background: var(--paused-dot); border-color: transparent; }
+.toggle.on .knob { transform: translateX(20px); }
+.toggle:focus-visible { outline: 3px solid rgba(99, 102, 241, 0.45); outline-offset: 2px; }
 .own { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; color: var(--ink-2); }
 .job { display: inline-flex; align-items: center; gap: 6px; }
 .notes { margin: 0; padding: 8px 12px 8px 26px; border-radius: 14px; background: var(--glass-soft); font-size: 12.5px; color: var(--muted); }

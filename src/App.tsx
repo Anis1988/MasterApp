@@ -5,7 +5,7 @@ import { Login } from './components/Login';
 import { DevicesCard, ExtrasCard, Guide, Overview, SetupCard, SitesCard, SpendCard } from './components/Panels';
 import { PauseAll } from './components/PauseAll';
 import { Backdrop, Icon, Spinner } from './components/ui';
-import { ApiError, clearCode, fetchStatus, flip, getCode, setCode, type Target } from './lib/api';
+import { ApiError, clearCode, fetchStatus, flip, getCode, setAiEverywhere, setCode, type Target } from './lib/api';
 import { getTheme, setTheme, type Theme } from './lib/theme';
 
 const REFRESH = 'M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6';
@@ -67,6 +67,20 @@ export default function App() {
     setResults(null);
     try {
       const r = await flip(action, target);
+      setResults(r.results);
+      await load(true);
+    } catch (e) {
+      setError(e instanceof Error ? e : new Error(String(e)));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const aiAct = async (off: boolean) => {
+    setBusy('ai');
+    setResults(null);
+    try {
+      const r = await setAiEverywhere(off);
       setResults(r.results);
       await load(true);
     } catch (e) {
@@ -162,7 +176,7 @@ export default function App() {
           <>
             <div className="hero">
               <Overview status={status} loading={loading} />
-              <PauseAll apps={apps} busy={busy === 'all'} results={results} onAct={act} />
+              <PauseAll apps={apps} kill={status.kill} busy={busy === 'all'} aiBusy={busy === 'ai'} results={results} onAct={act} onAi={(off) => void aiAct(off)} />
             </div>
 
             {missingSetup && <SetupCard items={status.setup} />}

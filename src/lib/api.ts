@@ -53,3 +53,7 @@ export const fetchStatus = (fresh = false) => call<Status>(`/api/status${fresh ?
 export type Target = { all: true } | { id: string };
 export const flip = (action: 'pause' | 'resume', target: Target) =>
   call<{ results: ActionResult[] }>('/api/pause', { method: 'POST', body: JSON.stringify({ action, ...target }) });
+
+/** AI off (or back on) in every app connected to the kill switch. */
+export const setAiEverywhere = (off: boolean) =>
+  call<{ results: ActionResult[] }>('/api/pause', { method: 'POST', body: JSON.stringify({ action: off ? 'ai-off' : 'ai-on' }) });

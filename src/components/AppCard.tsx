@@ -2,19 +2,20 @@ import type { AppStatus, Tone } from '../../server/types';
 import { ago, glyphBg, initials, platformName, toneClass } from '../lib/format';
 import { ConfirmButton, Icon, PAUSE_ICON, Pill, PLAY_ICON, Spinner } from './ui';
 
-function Mini({ label, value, tone, href, title }: { label: string; value: string; tone?: Tone | 'paused'; href?: string; title?: string }) {
+function Mini({ label, value, tone, href, title, wide }: { label: string; value: string; tone?: Tone | 'paused'; href?: string; title?: string; wide?: boolean }) {
   const body = (
     <>
       <span className="mini-label">{label}</span>
       <span className={`mini-value ${tone && tone !== 'muted' ? tone : ''}`}>{value}</span>
     </>
   );
+  const cls = `mini pane${wide ? ' wide' : ''}`;
   return href ? (
-    <a className="mini pane" href={href} target="_blank" rel="noreferrer" title={title}>
+    <a className={cls} href={href} target={href.startsWith('#') ? undefined : '_blank'} rel="noreferrer" title={title}>
       {body}
     </a>
   ) : (
-    <div className="mini pane" title={title}>
+    <div className={cls} title={title}>
       {body}
     </div>
   );
@@ -64,6 +65,23 @@ export function AppCard({ app, index, owner, busy, onFlip }: { app: AppStatus; i
         />
         {repo?.commit && <Mini label={`Code · ${ago(repo.commit.at)}`} value={repo.commit.message || 'commit'} href={repo.commit.url} title={repo.commit.message} />}
         {repo?.ci && <Mini label={`Checks · ${repo.ci.name}`} value={[repo.ci.label, ago(repo.ci.at)].filter(Boolean).join(' · ')} tone={repo.ci.tone !== 'good' ? repo.ci.tone : undefined} href={repo.ci.url} />}
+        {app.kill && (
+          <Mini
+            wide
+            label={app.kill.seenAt ? `Kill switch · asked ${ago(app.kill.seenAt)}` : 'Kill switch'}
+            value={
+              app.kill.work
+                ? 'Stopped: no AI, no jobs'
+                : app.kill.ai
+                  ? 'AI off · site and jobs running'
+                  : app.kill.seenAt
+                    ? 'Connected · running'
+                    : 'Not connected yet'
+            }
+            tone={app.kill.work || app.kill.ai ? 'paused' : app.kill.seenAt ? 'good' : 'warn'}
+            href={app.kill.seenAt ? undefined : '#guide'}
+          />
+        )}
       </div>
 
       {(jobs.length > 0 || app.runsOnItsOwn || app.ai) && (

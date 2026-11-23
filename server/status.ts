@@ -2,13 +2,15 @@
 
 import { cached } from './cache.js';
 import { CATALOG } from './catalog.js';
+import { hasKv, lastSeen, readFlags, resolve, type Flags } from './flags.js';
 import { hasGitHub, latestRun, OWNER, repoBasics, schedules } from './github.js';
 import { errorText } from './http.js';
 import { deployOf as netlifyDeploy, hasNetlify, latestDeploy, repoOf as netlifyRepo, sites, type NSite } from './netlify.js';
 import { getSpend } from './spend.js';
 import type { AppDef, AppStatus, Extra, HostInfo, RepoInfo, SetupItem, Status, Tone } from './types.js';
+export type { Flags };
 import { checkSite } from './uptime.js';
-import { deployOf as vercelDeploy, hasVercel, productionUrl, projects, repoOf as vercelRepo, scope, type VProject } from './vercel.js';
+import { dashboardOf, deployOf as vercelDeploy, hasVercel, productionUrl, projects, repoOf as vercelRepo, type VProject } from './vercel.js';
 
 export const getStatus = (fresh = false) => cached('status', 45_000, buildStatus, fresh);
 
@@ -28,13 +30,24 @@ async function buildStatus(): Promise<Status> {
       return undefined;
     });
 
-  const [basics, vprojects, vscope, nsites, spend] = await Promise.all([
+  // Apps that ask Master for the kill switch: your own apps, never this dashboard.
+  const switchIds = CATALOG.filter((a) => a.group === 'mine' && !a.self).map((a) => a.id);
+  let killError: string | undefined;
+  const fromKv = <T>(p: Promise<T>): Promise<T | undefined> =>
+    p.catch((e: unknown) => {
+      killError = errorText(e);
+      return undefined;
+    });
+
+  const [basics, vprojects, nsites, spend, flags, seen] = await Promise.all([
     hasGitHub() ? soft(repoBasics(CATALOG.map((a) => a.repo))) : Promise.resolve(undefined),
     hasVercel() ? soft(projects()) : Promise.resolve(undefined),
-    hasVercel() ? scope().catch(() => undefined) : Promise.resolve(undefined),
     hasNetlify() ? soft(sites()) : Promise.resolve(undefined),
     getSpend(),
+    hasKv() ? fromKv(readFlags()) : Promise.resolve(undefined),
+    hasKv() ? fromKv(lastSeen(switchIds)) : Promise.resolve(undefined),
   ]);
+  const kvOn = !!flags;
 
   const vByRepo = new Map<string, VProject>();
   for (const p of vprojects ?? []) {
@@ -46,7 +59,6 @@ async function buildStatus(): Promise<Status> {
     const r = netlifyRepo(s);
     if (r && !nByRepo.has(r)) nByRepo.set(r, s);
   }
-  const vercelLink = (name: string) => (vscope ? `https://vercel.com/${vscope}/${name}` : 'https://vercel.com/dashboard');
 
   async function one(def: AppDef): Promise<AppStatus> {
     const key = def.repo.toLowerCase();
@@ -61,7 +73,7 @@ async function buildStatus(): Promise<Status> {
     const useNetlify = !!ns && (!vp || (!!def.url && hostOf(def.url) === hostOf(ns.ssl_url ?? ns.url)));
     let host: HostInfo | undefined;
     if (vp && !useNetlify) {
-      host = { platform: 'vercel', id: vp.id, name: vp.name, dashboard: vercelLink(vp.name), url: productionUrl(vp), deploy: vercelDeploy(vp), paused: !!vp.paused };
+      host = { platform: 'vercel', id: vp.id, teamId: vp.teamId, name: vp.name, dashboard: dashboardOf(vp), url: productionUrl(vp), deploy: vercelDeploy(vp), paused: !!vp.paused };
     } else if (ns) {
       const latest = await latestDeploy(ns.id).catch(() => undefined);
       host = {
@@ -96,22 +108,29 @@ async function buildStatus(): Promise<Status> {
 
     const onVercel = host?.platform === 'vercel' && !!host.id && !def.self;
     const timed = jobs ?? [];
-    const pausable = !def.self && (onVercel || timed.length > 0);
-    const paused = onVercel ? !!host?.paused : timed.length > 0 && timed.every((s) => !s.on);
+    const switchable = kvOn && switchIds.includes(def.id);
+    const sw = switchable && flags ? resolve(flags, def.id) : undefined;
+    const kill = sw ? { ai: sw.ai, work: sw.work, seenAt: seen?.[def.id] ?? null } : undefined;
+    const pausable = !def.self && (onVercel || timed.length > 0 || switchable);
+    const hardPaused = onVercel ? !!host?.paused : timed.length > 0 && timed.every((s) => !s.on);
+    const paused = !!kill?.work || hardPaused;
     const inPauseAll = pausable && (def.inPauseAll ?? def.group === 'mine');
 
-    if (def.group === 'mine' && !def.self && !pausable) {
+    if (switchable && !kill?.seenAt) {
+      if (paused && !hardPaused) notes.push('Paused here, but this app isn’t connected to the kill switch yet, so it keeps running. See the Guide.');
+    } else if (def.group === 'mine' && !def.self && !pausable) {
       if (host?.platform === 'netlify')
         notes.push(def.runsOnItsOwn
-          ? 'Netlify has no pause switch, so its scheduled functions keep running. Stop them in the app or in Netlify.'
+          ? 'Netlify has no pause switch, so its scheduled functions keep running. Connect it to the kill switch to stop them.'
           : 'Netlify sites can’t be paused from here.');
       else if (host?.platform === 'github-pages') notes.push('GitHub Pages sites can’t be paused (they’re free).');
       else if (!host && (hasVercel() || hasNetlify())) notes.push('Not found on Vercel or Netlify: not deployed yet, or under another account.');
     }
+    if (kill?.ai && !paused) notes.push('AI is off for this app (kill switch). The site stays up.');
     if (def.self) notes.push('Never paused by this dashboard.');
 
     const [tone, summary] = verdict(paused, site?.ok === false ? site.label : undefined, host?.deploy?.tone, repoInfo?.ci?.tone, site?.tone);
-    return { ...def, host, repoInfo, site, paused, pausable, inPauseAll, tone, summary, notes };
+    return { ...def, host, repoInfo, site, kill, paused, pausable, inPauseAll, tone, summary, notes };
   }
 
   const apps = await Promise.all(CATALOG.map(one));
@@ -120,7 +139,7 @@ async function buildStatus(): Promise<Status> {
   const extras: Extra[] = [
     ...(vprojects ?? [])
       .filter((p) => !known.has(vercelRepo(p) ?? ''))
-      .map((p): Extra => ({ platform: 'vercel', name: p.name, url: productionUrl(p), dashboard: vercelLink(p.name), deploy: vercelDeploy(p), paused: !!p.paused })),
+      .map((p): Extra => ({ platform: 'vercel', name: p.name, url: productionUrl(p), dashboard: dashboardOf(p), deploy: vercelDeploy(p), paused: !!p.paused })),
     ...(nsites ?? [])
       .filter((s) => !known.has(netlifyRepo(s) ?? ''))
       .map((s): Extra => ({ platform: 'netlify', name: s.name, url: s.ssl_url ?? s.url, dashboard: s.admin_url, deploy: netlifyDeploy(s.published_deploy) })),
@@ -132,9 +151,20 @@ async function buildStatus(): Promise<Status> {
     { key: 'VERCEL_TOKEN', ok: hasVercel(), required: false, unlocks: 'Deploy status, addresses and the pause switch for Vercel apps' },
     { key: 'NETLIFY_TOKEN', ok: hasNetlify(), required: false, unlocks: 'Deploy status for Netlify sites' },
     { key: 'ANTHROPIC_ADMIN_KEY', ok: !!process.env.ANTHROPIC_ADMIN_KEY, required: false, unlocks: 'Claude spend for all your apps together' },
+    { key: 'KV_REST_API_URL', ok: hasKv(), required: false, unlocks: 'The kill switch every app checks (Vercel → Storage → Upstash Redis → connect to this project)' },
   ];
 
-  return { at: new Date().toISOString(), owner: OWNER, apps, extras, spend, setup, errors: [...problems] };
+  const killStatus: Status['kill'] = {
+    configured: kvOn,
+    aiOff: !!flags?.all.ai,
+    connected: switchIds.filter((id) => !!seen?.[id]).length,
+    of: switchIds.length,
+    updatedAt: flags?.updatedAt,
+    error: hasKv() ? killError : undefined,
+  };
+  if (killError) problems.add(killError);
+
+  return { at: new Date().toISOString(), owner: OWNER, apps, extras, spend, setup, kill: killStatus, errors: [...problems] };
 }
 
 const rank: Record<Tone, number> = { bad: 3, warn: 2, good: 1, muted: 0 };
