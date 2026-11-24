@@ -211,6 +211,17 @@ button { font: inherit; color: inherit; }
 .app { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
 .app.warn { border-color: rgba(245, 158, 11, 0.55); }
 .app.bad { border-color: rgba(239, 68, 68, 0.5); }
+/* Health border round each app's card, website tile and phone/PC row (owner's rule, `verdict` in server/status.ts):
+   green = live and fine, yellow = live but something wrong, red = offline, purple = paused, grey = nothing to check. */
+[data-health] { --health: var(--idle-dot); }
+[data-health='good'] { --health: var(--good-dot); }
+[data-health='warn'] { --health: var(--warn-dot); }
+[data-health='bad'] { --health: var(--bad-dot); }
+[data-health='paused'] { --health: var(--paused-dot); }
+.app[data-health], .site[data-health] { border: 2px solid var(--health); }
+.app[data-health='bad'] { box-shadow: inset 0 1px 0 var(--glass-edge), var(--shadow), 0 0 26px rgba(239, 68, 68, 0.35); }
+.list .list-row[data-health] { border: 2px solid var(--health); border-radius: 16px; padding: 8px 10px; margin-top: 8px; }
+.list li:first-child .list-row[data-health] { margin-top: 0; }
 .app-head { display: flex; align-items: center; gap: 12px; }
 .app-head h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 17px; font-weight: 600; }
 .glyph {
@@ -219,13 +230,6 @@ button { font: inherit; color: inherit; }
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.7), 0 8px 18px rgba(15, 23, 42, 0.18);
 }
 .glyph.small { width: 38px; height: 38px; border-radius: 12px; font-size: 13px; }
-/* Health ring round an app's icon: green = live and fine, yellow = live with problems, red = offline (verdict in server/status.ts). */
-.glyph[data-health] { outline: 3px solid var(--idle-dot); outline-offset: 2px; }
-.glyph.small[data-health] { outline-width: 2.5px; }
-.glyph[data-health='good'] { outline-color: var(--good-dot); }
-.glyph[data-health='warn'] { outline-color: var(--warn-dot); }
-.glyph[data-health='bad'] { outline-color: var(--bad-dot); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.7), 0 0 16px rgba(239, 68, 68, 0.55); }
-.glyph[data-health='paused'] { outline-color: var(--paused-dot); }
 .tag { font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 7px; border-radius: 6px; background: var(--glass-strong); color: var(--muted); }
 .minis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .mini { padding: 9px 12px; display: flex; flex-direction: column; min-width: 0; text-decoration: none; color: inherit; }

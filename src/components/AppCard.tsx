@@ -1,5 +1,5 @@
 import type { AppStatus, Tone } from '../../server/types';
-import { ago, glyphBg, HEALTH_WORDS, initials, platformName, toneClass } from '../lib/format';
+import { ago, glyphBg, initials, platformName, toneClass } from '../lib/format';
 import { ConfirmButton, Icon, PAUSE_ICON, Pill, PLAY_ICON, Spinner } from './ui';
 
 function Mini({ label, value, tone, href, title, wide }: { label: string; value: string; tone?: Tone | 'paused'; href?: string; title?: string; wide?: boolean }) {
@@ -32,9 +32,9 @@ export function AppCard({ app, index, owner, busy, onFlip }: { app: AppStatus; i
   const health = toneClass(app.tone, app.paused);
 
   return (
-    <article className={`glass app ${app.tone}${app.paused ? ' is-paused' : ''}`}>
+    <article className={`glass app ${app.tone}${app.paused ? ' is-paused' : ''}`} data-health={health}>
       <div className="app-head">
-        <span className="glyph" data-health={health} title={HEALTH_WORDS[health]} style={{ background: glyphBg(index, app.paused) }} aria-hidden>
+        <span className="glyph" style={{ background: glyphBg(index, app.paused) }} aria-hidden>
           {initials(app.name)}
         </span>
         <div className="grow">
