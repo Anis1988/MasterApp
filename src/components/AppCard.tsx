@@ -1,5 +1,5 @@
 import type { AppStatus, Tone } from '../../server/types';
-import { ago, glyphBg, initials, platformName, toneClass } from '../lib/format';
+import { ago, glyphBg, HEALTH_WORDS, initials, platformName, toneClass } from '../lib/format';
 import { ConfirmButton, Icon, PAUSE_ICON, Pill, PLAY_ICON, Spinner } from './ui';
 
 function Mini({ label, value, tone, href, title, wide }: { label: string; value: string; tone?: Tone | 'paused'; href?: string; title?: string; wide?: boolean }) {
@@ -29,11 +29,12 @@ export function AppCard({ app, index, owner, busy, onFlip }: { app: AppStatus; i
   const url = site?.url ?? app.url ?? host?.url;
   const jobs = repo?.schedules ?? [];
   const pausedSite = site?.label === 'Paused';
+  const health = toneClass(app.tone, app.paused);
 
   return (
     <article className={`glass app ${app.tone}${app.paused ? ' is-paused' : ''}`}>
       <div className="app-head">
-        <span className="glyph" style={{ background: glyphBg(index, app.paused) }} aria-hidden>
+        <span className="glyph" data-health={health} title={HEALTH_WORDS[health]} style={{ background: glyphBg(index, app.paused) }} aria-hidden>
           {initials(app.name)}
         </span>
         <div className="grow">
@@ -44,7 +45,7 @@ export function AppCard({ app, index, owner, busy, onFlip }: { app: AppStatus; i
           </h3>
           <p className="small muted ellipsis">{app.about}</p>
         </div>
-        <Pill tone={toneClass(app.tone, app.paused)}>{app.summary}</Pill>
+        <Pill tone={health}>{app.summary}</Pill>
       </div>
 
       <div className="minis">

@@ -7,7 +7,7 @@ import { hasGitHub, latestRun, OWNER, repoBasics, schedules } from './github.js'
 import { errorText } from './http.js';
 import { deployOf as netlifyDeploy, hasNetlify, latestDeploy, repoOf as netlifyRepo, sites, type NSite } from './netlify.js';
 import { getSpend } from './spend.js';
-import type { AppDef, AppStatus, Extra, HostInfo, RepoInfo, SetupItem, Status, Tone } from './types.js';
+import type { AppDef, AppStatus, Extra, HostInfo, RepoInfo, SetupItem, SiteCheck, Status, Tone } from './types.js';
 export type { Flags };
 import { checkSite } from './uptime.js';
 import { dashboardOf, deployOf as vercelDeploy, hasVercel, productionUrl, projects, repoOf as vercelRepo, type VProject } from './vercel.js';
@@ -129,7 +129,7 @@ async function buildStatus(): Promise<Status> {
     if (kill?.ai && !paused) notes.push('AI is off for this app (kill switch). The site stays up.');
     if (def.self) notes.push('Never paused by this dashboard.');
 
-    const [tone, summary] = verdict(paused, site?.ok === false ? site.label : undefined, host?.deploy?.tone, repoInfo?.ci?.tone, site?.tone);
+    const [tone, summary] = verdict(paused, site, host?.deploy?.tone, repoInfo?.ci?.tone);
     return { ...def, host, repoInfo, site, kill, paused, pausable, inPauseAll, tone, summary, notes };
   }
 
@@ -169,13 +169,20 @@ async function buildStatus(): Promise<Status> {
 
 const rank: Record<Tone, number> = { bad: 3, warn: 2, good: 1, muted: 0 };
 
-function verdict(paused: boolean, siteDown: string | undefined, deploy?: Tone, checks?: Tone, site?: Tone): [Tone, string] {
+/**
+ * One health colour per app (owner's rule): the ring round its icon, its card edge, its label and the site dot.
+ * green (good) = live and nothing wrong · yellow (warn) = live, but something is wrong (last build failed: the
+ * previous version is still served; checks failing; slow) · red (bad) = offline, not working at all (the site
+ * doesn't answer or answers with an error). Paused on purpose = purple (`paused` on the client); no data = grey.
+ * Apps without a site to check (phone & PC apps) are never red: there's nothing to be offline.
+ */
+function verdict(paused: boolean, site: SiteCheck | undefined, deploy?: Tone, checks?: Tone): [Tone, string] {
   if (paused) return ['muted', 'Paused'];
-  if (siteDown) return ['bad', siteDown === 'Paused' ? 'Site paused' : 'Site down'];
-  if (deploy === 'bad') return ['bad', 'Last build failed'];
+  if (site && !site.ok) return site.label === 'Paused' ? ['muted', 'Site paused'] : ['bad', 'Offline'];
+  if (deploy === 'bad') return ['warn', 'Last build failed'];
   if (checks === 'bad') return ['warn', 'Checks failing'];
-  if (deploy === 'warn') return ['warn', 'Building'];
-  if (site === 'warn') return ['warn', 'Slow'];
-  const best = [deploy, checks, site].reduce<number>((m, t) => Math.max(m, t ? rank[t] : 0), 0);
+  if (site?.tone === 'warn') return ['warn', 'Slow'];
+  if (deploy === 'warn') return ['good', 'Deploying'];
+  const best = [deploy, checks, site?.tone].reduce<number>((m, t) => Math.max(m, t ? rank[t] : 0), 0);
   return best >= 1 ? ['good', 'All good'] : ['muted', 'No data yet'];
 }

@@ -50,3 +50,8 @@ export const glyphBg = (index: number, paused = false) => {
 
 /** The CSS class for a status colour: paused wins over everything. */
 export const toneClass = (tone: Tone, paused = false) => (paused ? 'paused' : tone);
+
+/** What the ring round an app's icon means, for the tooltip. */
+export const HEALTH_WORDS: Record<ReturnType<typeof toneClass>, string> = {
+  good: 'Healthy', warn: 'Live, but something is wrong', bad: 'Offline', paused: 'Paused', muted: 'No data yet',
+};

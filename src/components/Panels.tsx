@@ -1,5 +1,5 @@
 import type { AppStatus, Extra, SetupItem, Spend, Status } from '../../server/types';
-import { ago, glyphBg, initials, platformName, toneClass, usd } from '../lib/format';
+import { ago, glyphBg, HEALTH_WORDS, initials, platformName, toneClass, usd } from '../lib/format';
 import { Icon, PAUSE_ICON, Pill, PLAY_ICON, useArmed } from './ui';
 
 const MONTH = new Date().toLocaleString('en-US', { month: 'short' });
@@ -59,7 +59,7 @@ export function Overview({ status, loading }: { status: Status; loading: boolean
         </div>
         <div className="pane tile">
           <span className="tile-head">
-            Need a look <span className={`dot ${problems.length ? 'bad' : 'good'}`} aria-hidden />
+            Need a look <span className={`dot ${problems.some((a) => a.tone === 'bad') ? 'bad' : problems.length ? 'warn' : 'good'}`} aria-hidden />
           </span>
           <span className="tile-value">{problems.length}</span>
           <span className="bar" aria-hidden>
@@ -160,11 +160,12 @@ export function DevicesCard({ apps, offset }: { apps: AppStatus[]; offset: numbe
         {apps.map((a, i) => {
           const rel = a.repoInfo?.release;
           const failing = a.repoInfo?.ci?.tone === 'bad';
-          const [tone, label] = failing ? ['bad', 'Checks failing'] : rel ? ['good', rel.tag] : ['muted', 'No release'];
+          const [tone, label] = failing ? ['warn', 'Checks failing'] : rel ? ['good', rel.tag] : ['muted', 'No release'];
+          const health = toneClass(a.tone, a.paused);
           return (
             <li key={a.id}>
               <a className="list-row" href={rel?.url ?? a.repoInfo?.url ?? '#'} target="_blank" rel="noreferrer">
-                <span className="glyph small" style={{ background: glyphBg(offset + i) }} aria-hidden>
+                <span className="glyph small" data-health={health} title={HEALTH_WORDS[health]} style={{ background: glyphBg(offset + i) }} aria-hidden>
                   {initials(a.name)}
                 </span>
                 <span className="grow" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -306,8 +307,10 @@ export function Guide() {
       <p>
         One place for all your apps. Each card shows whether the site answers, the last deploy on Vercel or Netlify, the last code change on
         GitHub, the last automatic check (GitHub Actions) and what runs by itself. Tap any of those boxes to open the page behind it. The
-        page refreshes every minute while it’s open. The coloured label says the worst thing going on: red = down or a failed build, amber =
-        checks failing or building, purple = paused.
+        page refreshes every minute while it’s open. The ring round each app’s icon (and its label) says how it’s doing: <b>green</b> = live and
+        nothing wrong; <b>yellow</b> = live, but something is wrong (the last build failed and the previous version is still online, checks are
+        failing, or it’s slow); <b>red</b> = offline, not working at all (the site doesn’t answer, or answers with an error). Purple = paused by
+        you, grey = nothing to check yet. Phone &amp; PC apps have no site, so they’re never red.
       </p>
       <h3>The pause switch</h3>
       <p>
