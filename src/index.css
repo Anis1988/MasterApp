@@ -218,9 +218,10 @@ button { font: inherit; color: inherit; }
 [data-health='warn'] { --health: var(--warn-dot); }
 [data-health='bad'] { --health: var(--bad-dot); }
 [data-health='paused'] { --health: var(--paused-dot); }
-.app[data-health], .site[data-health] { border: 2px solid var(--health); }
-.app[data-health='bad'] { box-shadow: inset 0 1px 0 var(--glass-edge), var(--shadow), 0 0 26px rgba(239, 68, 68, 0.35); }
-.list .list-row[data-health] { border: 2px solid var(--health); border-radius: 16px; padding: 8px 10px; margin-top: 8px; }
+/* Owner's pick "D": a thick border plus a thick colour band across the top. */
+.app[data-health] { border: 5px solid var(--health); padding-top: 30px; box-shadow: inset 0 14px 0 var(--health), var(--shadow); }
+.site[data-health] { border: 4px solid var(--health); padding-top: 16px; box-shadow: inset 0 7px 0 var(--health); }
+.list .list-row[data-health] { border: 4px solid var(--health); border-radius: 16px; padding: 15px 10px 8px; margin-top: 8px; box-shadow: inset 0 7px 0 var(--health); }
 .list li:first-child .list-row[data-health] { margin-top: 0; }
 .app-head { display: flex; align-items: center; gap: 12px; }
 .app-head h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 17px; font-weight: 600; }

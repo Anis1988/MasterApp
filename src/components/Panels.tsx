@@ -307,7 +307,7 @@ export function Guide() {
       <p>
         One place for all your apps. Each card shows whether the site answers, the last deploy on Vercel or Netlify, the last code change on
         GitHub, the last automatic check (GitHub Actions) and what runs by itself. Tap any of those boxes to open the page behind it. The
-        page refreshes every minute while it’s open. The border round each app (its card, its website tile or its Phone &amp; PC row) says how it’s doing, and so does its label: <b>green</b> = live and
+        page refreshes every minute while it’s open. The thick border and the colour band across the top of each app (its card, its website tile or its Phone &amp; PC row) say how it’s doing, and so does its label: <b>green</b> = live and
         nothing wrong; <b>yellow</b> = live, but something is wrong (the last build failed and the previous version is still online, checks are
         failing, or it’s slow); <b>red</b> = offline, not working at all (the site doesn’t answer, or answers with an error). Purple = paused by
         you, grey = nothing to check yet. Phone &amp; PC apps have no site, so they’re never red.
