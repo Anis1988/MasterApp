@@ -1,8 +1,8 @@
 import type { AppDef } from './types.js';
 
 /**
- * Your apps (from a scan of github.com/Anis1988, Nov 2026). Old practice repos from 2020–2024, Daily-News
- * (a NewsAPI demo) and aionmeter-logs (data only) are left out on purpose.
+ * Your apps (from a scan of github.com/Anis1988, Nov 2026; Job Hunt added 27 Nov). Old practice repos from
+ * 2020–2024, Daily-News (a NewsAPI demo) and aionmeter-logs (data only: Aion Meter's logs) are left out on purpose.
  *
  * To add one: copy a line, set `repo` to the GitHub repo name. Vercel and Netlify are matched by repo, so the
  * deploy status, the address and the pause switch are found on their own. Vercel projects and Netlify sites that
@@ -24,6 +24,9 @@ export const CATALOG: AppDef[] = [
     about: 'Duke Energy usage, costs and supplier deals', ai: 'Claude', runsOnItsOwn: 'Vercel cron: daily alerts' },
   { id: 'cv-studio', name: 'CV Studio', icon: '📄', repo: 'CV', group: 'mine',
     about: 'ATS-ready resumes with an AI assistant', ai: 'Claude' },
+  { id: 'job-hunt', name: 'Job Hunt', icon: '💼', repo: 'applying-job', group: 'mine',
+    about: 'Finds jobs near you, scores them against your CV, drafts the application', ai: 'Claude',
+    runsOnItsOwn: 'Vercel cron: daily job search + morning email' },
   { id: 'taxfilling', name: 'TaxFilling', icon: '🧾', repo: 'TaxFilling', group: 'mine',
     about: 'W-2 scan, e-file or print-and-mail, AI helper', ai: 'AI assistant' },
   { id: 'master', name: 'Master', icon: '🛰️', repo: 'MasterApp', group: 'mine', self: true,
